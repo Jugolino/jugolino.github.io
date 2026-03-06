@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Guilherme Oliveira</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/common.css">
+<link rel="stylesheet" href="../css/index.css">
+</head>
+<body>
+<div class="wrapper">
+
+<header>
+  <div class="logo">
+    <div class="logo-main">
+      Guilherme Oliveira <span class="cursor"></span>
+    </div>
+    <div class="logo-sub">Forense Digital • Pentest</div>
+  </div>
+
+  <nav class="nav-right" aria-label="Navegação principal">
+    <a class="active" href="./index.html"><span class="nav-link-icon">⌂</span>home</a>
+    <a href="./whoami.html"><span class="nav-link-icon">i</span>whoami</a>
+  </nav>
+
+  <div class="sidebar-social">
+    <a href="https://github.com/Jugolino" target="_blank" rel="noopener noreferrer" aria-label="GitHub">GitHub</a>
+    <a href="https://www.linkedin.com/in/guilherme-oliveira-6b6992276" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
+  </div>
+</header>
+
+<main class="page-layout">
+  <section class="feed-column home-content">
+    <div class="pagetitle">Home</div>
+    <section id="home-posts" class="home-posts"></section>
+  </section>
+
+  <aside class="right-panel">
+    <div class="panel-block">
+      <input id="panel-search" data-panel-search type="search" placeholder="Search..." autocomplete="off">
+    </div>
+
+    <div class="panel-block">
+      <h3>Recently Updated</h3>
+      <div id="panel-recent" class="panel-list"></div>
+    </div>
+
+    <div class="panel-block">
+      <h3>Trending Tags</h3>
+      <div id="panel-tags" class="panel-tags"></div>
+    </div>
+  </aside>
+</main>
+
+</div>
+
+<script src="../js/posts-data.js"></script>
+<script src="../js/home-posts.js"></script>
+<script src="../js/sidebar-panel.js"></script>
+<script src="../js/index.js"></script>
+</body>
+</html>

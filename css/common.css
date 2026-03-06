@@ -1,0 +1,169 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD2OwG_TA.woff2) format('woff2');
+}
+
+body {
+  background: #0b0b0b;
+  color: #8a8a8a;
+  border-top: 1px solid #1a1a1a;
+  border-bottom: 1px solid #1a1a1a;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: geometricPrecision;
+}
+
+p,
+th,
+input {
+  color: #8a8a8a;
+}
+
+a {
+  color: #8a8a8a;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #50c96e;
+}
+
+.wrapper {
+  width: 96%;
+  max-width: 1500px;
+}
+
+header {
+  padding: 25px 40px;
+  border: 1px solid #1a1a1a;
+  display: flex;
+  align-items: center;
+  background: #101010;
+  margin: 30px;
+}
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.logo::before {
+  content: none;
+}
+
+.logo-main {
+  font-size: 28px;
+  color: #50c96e;
+  text-shadow: 0 0 8px rgba(0, 255, 51, 0.5);
+  font-weight: 600;
+}
+
+.logo-sub {
+  font-size: 14px;
+  color: #777;
+  margin-top: 3px;
+  width: 100%;
+  text-align: center;
+  transform: translateX(-1ch);
+}
+
+.cursor::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 16px;
+  background: #50c96e;
+  margin-left: 6px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+  font-size: 15px;
+}
+
+.nav-link-icon,
+.sidebar-social {
+  display: none;
+}
+
+.pagetitle {
+  font-size: 18px;
+  color: #50c96e;
+  text-shadow: 0 0 8px rgba(82, 232, 106, 0.4);
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+h1,
+h3,
+h4,
+h5,
+h6,
+.logo-main,
+.logo-sub,
+.nav-right,
+.nav-right a,
+.pagetitle,
+.terminal-scroll,
+.post-title,
+.post-section,
+.post-date,
+.sidebar h2,
+.post-code,
+.codebox {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+@media (max-width: 980px) {
+  .wrapper {
+    width: 100%;
+  }
+
+  header {
+    margin: 12px;
+    padding: 14px 12px;
+    gap: 10px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .logo-main {
+    font-size: 24px;
+  }
+
+  .logo-sub {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .nav-right {
+    margin-left: 0;
+    gap: 12px;
+    font-size: 14px;
+    flex-wrap: wrap;
+  }
+}

@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Recuperacao de Dados em Pendrive - Guilherme Oliveira</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/common.css">
+<link rel="stylesheet" href="../../css/post.css">
+</head>
+<body>
+<div class="wrapper">
+<header>
+  <div class="logo">
+    <div class="logo-main">Guilherme Oliveira <span class="cursor"></span></div>
+    <div class="logo-sub">Forense Digital • Pentest</div>
+  </div>
+  <nav class="nav-right" aria-label="Navegação principal">
+    <a href="../index.html"><span class="nav-link-icon">⌂</span>home</a>
+    <a href="../whoami.html"><span class="nav-link-icon">i</span>whoami</a>
+  </nav>
+  <div class="sidebar-social">
+    <a href="https://github.com/Jugolino" target="_blank" rel="noopener noreferrer" aria-label="GitHub">GitHub</a>
+    <a href="https://www.linkedin.com/in/guilherme-oliveira-6b6992276" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
+  </div>
+</header>
+
+<main class="post-content-area">
+  <div class="post-header">
+    <h1 class="post-title">Recuperação de Dados: Conceitos Fundamentais</h1>
+    <div class="post-date">Mar 2, 2026 • Forense Digital</div>
+  </div>
+
+  <div class="post-hero"></div>
+
+  <aside class="post-toc" id="post-toc">
+    <section class="post-side-section">
+      <h3>Recently Updated</h3>
+      <a href="../blogs.html">Recuperação de Dados: Conceitos Fundamentais</a>
+    </section>
+
+    <section class="post-side-section">
+      <h3>Trending Tags</h3>
+      <div class="post-tags">
+        <span>Forense</span>
+        <span>Data Carving</span>
+        <span>Windows</span>
+        <span>Linux</span>
+        <span>SHA-256</span>
+      </div>
+    </section>
+
+    <section class="post-side-section">
+      <h3>Contents</h3>
+      <a href="#sec-intro">Conceitos Fundamentais</a>
+      <a href="#sec-registro">Como os Dados São Registrados</a>
+      <a href="#sec-exclusao">O Que Acontece ao Apagar</a>
+      <a href="#sec-recuperacao">Formas de Recuperação</a>
+      <a href="#sec-preservacao">Preservação do Estado Original</a>
+      <a href="#sec-imagem">Imagem Bit a Bit</a>
+      <a href="#sec-objetivo">Objetivo Prático do Estudo</a>
+      <a href="#sec-dispositivo">Identificação do Dispositivo e Preparação para Aquisição</a>
+      <a href="#sec-fdisk">Confirmação Estrutural com fdisk</a>
+      <a href="#sec-aquisicao">Aquisição Bit a Bit do Dispositivo</a>
+      <a href="#sec-dd">Criação da Imagem Bit a Bit</a>
+      <a href="#sec-resultado-aquisicao">Resultado da Aquisição</a>
+      <a href="#sec-tamanho-imagem">Verificação do Tamanho da Imagem</a>
+      <a href="#sec-sha256">Verificação de Integridade com SHA-256</a>
+      <a href="#sec-fs">Identificação do Sistema de Arquivos</a>
+    </section>
+  </aside>
+
+  <div class="post-body">
+    <h2 id="sec-intro" class="post-section">Conceitos Fundamentais</h2>
+    <p>
+      A recuperação de dados é um processo técnico que envolve a restauração de informações armazenadas
+      em dispositivos digitais que se tornaram inacessíveis, foram apagadas ou sofreram algum tipo de falha lógica.
+      Diferentemente da ideia comum de que um arquivo apagado deixa de existir imediatamente, a realidade é que os
+      sistemas de armazenamento operam de maneira muito mais estruturada e previsível.
+    </p>
+    <p>
+      Todo dispositivo de armazenamento organiza seus dados em unidades físicas chamadas setores. Esses setores são
+      agrupados em blocos maiores conhecidos como
+      <span class="cite-word">clusters<span class="cite-tip">Cluster é o menor bloco lógico de alocação usado pelo sistema de arquivos para gravar dados.</span></span>,
+      que são utilizados pelo sistema de arquivos para armazenar informações. O sistema operacional não trabalha
+      diretamente com os dados brutos; ele utiliza estruturas lógicas que registram onde cada arquivo está localizado,
+      qual seu tamanho e quando foi criado ou modificado.
+    </p>
+    <p>
+      Compreender essa separação entre dados físicos e
+      <span class="cite-word">metadados estruturais<span class="cite-tip">Metadados descrevem o arquivo (nome, timestamps, localização, tamanho), não o conteúdo em si.</span></span>
+      é essencial para entender como a recuperação funciona.
+    </p>
+
+    <h2 id="sec-registro" class="post-section">Como os Dados São Registrados no Sistema</h2>
+    <p>
+      Quando um arquivo é criado, o sistema grava o conteúdo em clusters físicos e, simultaneamente,
+      registra informações estruturais que descrevem aquele arquivo. Essas informações incluem o nome,
+      o tamanho, a localização física e os timestamps associados.
+    </p>
+    <p>
+      Esses registros permitem que o sistema saiba exatamente como acessar o conteúdo armazenado.
+      Sem essa estrutura lógica, os dados seriam apenas sequências de bytes sem organização aparente.
+    </p>
+    <p>
+      Cada sistema de arquivos possui sua própria maneira de organizar essas estruturas, mas o princípio
+      permanece o mesmo: existe sempre uma camada que descreve o arquivo e outra que contém os dados
+      propriamente ditos.
+    </p>
+    <p>Essa distinção é fundamental para compreender o que ocorre quando um arquivo é removido.</p>
+
+    <h2 id="sec-exclusao" class="post-section">O Que Acontece Quando Um Arquivo é Apagado</h2>
+    <p>
+      Ao apagar um arquivo, o sistema normalmente não remove imediatamente os dados físicos do dispositivo.
+      O que ocorre é a remoção da referência estrutural que aponta para os clusters onde o conteúdo
+      está armazenado. O espaço anteriormente ocupado é marcado como disponível para reutilização.
+    </p>
+    <p>
+      Enquanto nenhum outro dado for gravado naquele local, o conteúdo original permanece fisicamente intacto.
+    </p>
+    <p>
+      Esse processo é conhecido como
+      <span class="cite-word">exclusão lógica<span class="cite-tip">Exclusão lógica remove referência. Exclusão física só ocorre após sobrescrita real dos blocos.</span></span>.
+      A exclusão física só acontece quando os clusters são sobrescritos por novas informações.
+    </p>
+    <p>É justamente nesse intervalo entre a exclusão lógica e a sobrescrita física que a recuperação de dados se torna possível.</p>
+
+    <h2 id="sec-recuperacao" class="post-section">Formas de Recuperação de Dados</h2>
+    <p>
+      Existem duas abordagens principais para recuperar arquivos apagados. A primeira utiliza a própria
+      estrutura do sistema de arquivos. Quando os registros estruturais ainda estão presentes, mesmo
+      marcados como excluídos, é possível reconstruir o arquivo com precisão, pois ainda existe
+      informação sobre sua localização e tamanho.
+    </p>
+    <p>
+      A segunda abordagem ignora completamente a estrutura lógica e examina diretamente os dados
+      brutos do dispositivo. Esse método é conhecido como
+      <span class="cite-word">data carving<span class="cite-tip">Data carving recupera arquivos por assinatura binária, mesmo sem metadados válidos.</span></span>.
+      Ele se baseia na identificação de assinaturas binárias características de determinados formatos de arquivo.
+    </p>
+    <p>
+      Arquivos de imagem, por exemplo, possuem sequências iniciais específicas que indicam seu formato.
+      O mesmo ocorre com vídeos e áudios. Ao localizar essas assinaturas no espaço não alocado do
+      dispositivo, é possível reconstruir arquivos mesmo que suas referências estruturais tenham sido removidas.
+    </p>
+    <p>
+      Essa técnica é particularmente útil quando o sistema de arquivos está corrompido ou quando os
+      registros originais não estão mais disponíveis.
+    </p>
+
+    <h2 id="sec-preservacao" class="post-section">Preservação do Estado Original</h2>
+    <p>
+      Antes de qualquer tentativa de recuperação, é fundamental preservar o estado original do
+      dispositivo. Conectar uma mídia diretamente a um sistema operacional pode gerar alterações
+      automáticas, como atualização de timestamps, criação de arquivos temporários e registros internos.
+    </p>
+    <p>Essas pequenas modificações podem alterar a estrutura original e comprometer a precisão da análise.</p>
+    <p>Por esse motivo, o procedimento adequado consiste em criar uma imagem bit a bit do dispositivo e realizar toda a análise sobre essa cópia.</p>
+
+    <h2 id="sec-imagem" class="post-section">O Que é Uma Imagem Bit a Bit</h2>
+    <p>
+      Uma imagem bit a bit é uma cópia exata do dispositivo, realizada setor por setor.
+      Diferentemente de uma simples cópia de arquivos visíveis, essa imagem inclui todo o conteúdo da mídia,
+      inclusive espaço não alocado, fragmentos residuais e estruturas internas do sistema de arquivos.
+    </p>
+    <p>
+      Isso significa que mesmo arquivos apagados e dados aparentemente invisíveis são preservados na imagem.
+    </p>
+    <p>
+      Após a criação dessa imagem, é recomendável gerar um hash criptográfico, como
+      <span class="cite-word">SHA-256<span class="cite-tip">Hash criptográfico funciona como impressão digital da evidência; qualquer alteração muda o valor.</span></span>.
+      Esse hash funciona como uma impressão digital matemática da cópia. Se qualquer bit for alterado,
+      o valor do hash será diferente, permitindo verificar a integridade do arquivo de imagem.
+    </p>
+    <p>Trabalhar sobre a imagem, e não sobre o dispositivo original, garante que o estado inicial seja preservado durante todo o processo de recuperação.</p>
+
+    <h2 id="sec-objetivo" class="post-section">Objetivo Prático do Estudo</h2>
+    <p>
+      Neste artigo será demonstrado, de forma prática e detalhada, como realizar a recuperação de dados
+      utilizando um pendrive como base experimental. A escolha do pendrive se deve ao seu tamanho reduzido, o
+      que facilita a execução e o acompanhamento das etapas. No entanto, a metodologia aplicada é a mesma
+      utilizada em qualquer outro dispositivo de armazenamento.
+    </p>
+    <p>
+      O processo incluirá a identificação correta do dispositivo, a criação da imagem bit a bit, a verificação de
+      integridade, a identificação do sistema de arquivos e a recuperação de imagens, vídeos e áudios apagados.
+    </p>
+    <p>
+      Além da restauração dos arquivos, será realizada a análise de metadados e a verificação estrutural dos
+      conteúdos recuperados, demonstrando não apenas como restaurar informações, mas também como
+      interpretar corretamente os dados obtidos.
+    </p>
+    <p>
+      Nos próximos passos, iniciaremos a parte prática com a identificação do dispositivo e a criação da imagem
+      bit a bit, que servirá como base para toda a análise subsequente.
+    </p>
+
+    <h2 id="sec-dispositivo" class="post-section">Identificação do Dispositivo e Preparação para Aquisição</h2>
+    <p>
+      O primeiro passo em qualquer processo de recuperação de dados é identificar corretamente o dispositivo que
+      será analisado. Essa etapa é crítica, pois trabalhar no disco errado pode resultar em perda irreversível de
+      dados ou contaminação do ambiente.
+    </p>
+    <p>
+      Com o pendrive conectado ao sistema, foi executado o comando:
+    </p>
+
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-lsblk">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-lsblk">lsblk</code></pre>
+    </div>
+
+    <p>A saída obtida foi a seguinte:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/lsblk-output.png" alt="Saída do comando lsblk no terminal">
+    </figure>
+
+    <p>Observando a saída, é possível identificar três dispositivos principais:</p>
+
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Dispositivo</span>
+        <span>Descrição</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>nvme0n1</code></span>
+        <span>disco interno do sistema (476,9 GB)</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>zram0</code></span>
+        <span>área de <span class="cite-word">swap<span class="cite-tip">Swap é uma área usada como extensão da memória RAM, normalmente para aliviar pressão de memória.</span></span> em memória</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>sda</code></span>
+        <span>dispositivo removível de 14,9 GB</span>
+      </div>
+    </div>
+    <p>O campo RM = 1 indica que <code>sda</code> é um dispositivo removível. Além disso, o tamanho de aproximadamente 14,9 GB confirma tratar-se do pendrive utilizado no teste.</p>
+
+    <h2 id="sec-fdisk" class="post-section">Confirmação Estrutural com fdisk</h2>
+    <p>Para confirmar as informações e obter detalhes estruturais do dispositivo, foi executado:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-fdisk">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-fdisk">sudo fdisk -l</code></pre>
+    </div>
+    <p>A parte relevante da saída referente ao pendrive foi:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fdisk-output.png" alt="Saída do comando sudo fdisk -l no terminal">
+    </figure>
+    <p>Aqui podemos extrair informações técnicas importantes:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Informação</span>
+        <span>Detalhe</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Modelo</code></span>
+        <span>Cruzer Blade, confirmando tratar-se de um pendrive USB.</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Tamanho</code></span>
+        <span>Aproximadamente 14,91 GiB, distribuídos em 31.266.816 setores.</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Setores</code></span>
+        <span>Tamanho de setor lógico e físico de 512 bytes, comum em dispositivos USB.</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Rótulo</code></span>
+        <span>Tipo de rótulo do disco em DOS (<span class="cite-word">MBR<span class="cite-tip">MBR (Master Boot Record) é um esquema de particionamento tradicional, com tabela de partições no setor inicial do disco e limite de até 2 TB em muitos cenários.</span></span>), usando particionamento tradicional <span class="cite-word">MBR<span class="cite-tip">No modelo MBR, o boot e a tabela de partições ficam no início do disco, com limitações de tamanho e quantidade de partições primárias.</span></span> e não <span class="cite-word">GPT<span class="cite-tip">GPT (GUID Partition Table) é o esquema moderno de particionamento, com maior robustez, suporte a discos grandes e mais partições.</span></span>.</span>
+      </div>
+    </div>
+
+    <h2 id="sec-aquisicao" class="post-section">Aquisição Bit a Bit do Dispositivo</h2>
+    <p>Após identificar corretamente o dispositivo <code>/dev/sda</code> como sendo o pendrive Cruzer Blade de 14,9 GiB, o próximo passo foi realizar a aquisição completa da mídia.</p>
+    <p>Antes da cópia, o dispositivo foi desmontado para evitar qualquer modificação automática:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-umount">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-umount">sudo umount /dev/sda</code></pre>
+    </div>
+    <p>A ausência de mensagens de erro indica que o sistema desmontou o dispositivo com sucesso, deixando-o pronto para leitura direta.</p>
+
+    <h2 id="sec-dd" class="post-section">Criação da Imagem Bit a Bit</h2>
+    <p>Com o dispositivo corretamente identificado e desmontado, iniciou-se a criação da imagem forense utilizando o comando <code>dd</code>.</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-dd">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-dd">sudo dd if=/dev/sda of=pendrive.img bs=4M status=progress</code></pre>
+    </div>
+    <p>Esse comando pode parecer simples, mas sua estrutura merece ser compreendida em detalhes.</p>
+    <p>O <code>dd</code> é uma ferramenta de baixo nível que realiza cópia direta de dados entre dispositivos ou arquivos. Diferentemente de comandos como <code>cp</code>, ele não interpreta sistema de arquivos. Ele lê e escreve blocos brutos de dados exatamente como estão armazenados.</p>
+    <p>O parâmetro <code>if=/dev/sda</code> define o <em>input file</em>, ou seja, a origem da leitura. Nesse caso, trata-se do dispositivo físico do pendrive, representado pelo arquivo especial <code>/dev/sda</code>.</p>
+    <p>O parâmetro <code>of=pendrive.img</code> define o <em>output file</em>, que será o arquivo de destino onde a cópia será gravada. Esse arquivo passa a ser uma réplica exata do dispositivo original.</p>
+    <p>O parâmetro <code>bs=4M</code> define o tamanho do bloco de leitura e escrita. Isso significa que o <code>dd</code> irá ler e escrever blocos de 4 megabytes por vez. Utilizar blocos maiores reduz a quantidade de operações de I/O, tornando o processo mais eficiente.</p>
+    <p>O parâmetro <code>status=progress</code> apenas instrui o <code>dd</code> a exibir o progresso da cópia em tempo real, mostrando a quantidade de bytes já transferidos e a taxa média de leitura.</p>
+    <h2 id="sec-resultado-aquisicao" class="post-section">Resultado da Aquisição</h2>
+    <p>A saída final foi:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/dd-output.png" alt="Saída final do comando dd para aquisição bit a bit">
+    </figure>
+    <p>Essa informação revela vários pontos importantes.</p>
+    <p>O valor “3816+1 registros entrados” indica que foram lidos 3816 blocos completos de 4 MB e um bloco parcial final. O mesmo número aparece em “registros saídos”, indicando que tudo o que foi lido foi escrito corretamente no arquivo de destino.</p>
+    <p>O total de bytes copiados foi 16.008.609.792 bytes. Esse valor corresponde exatamente ao tamanho do dispositivo físico identificado anteriormente pelo <code>fdisk</code>.</p>
+    <p>Isso significa que todos os setores do pendrive foram copiados, do setor 0 até o último setor.</p>
+    <p>Quando falamos em imagem bit a bit, estamos dizendo que cada setor de 512 bytes foi copiado sequencialmente, preservando:</p>
+    <ul>
+      <li>Arquivos ativos</li>
+      <li>Arquivos apagados</li>
+      <li>Espaço não alocado</li>
+      <li>Estruturas da FAT</li>
+      <li>Boot sector</li>
+      <li>Fragmentos residuais</li>
+    </ul>
+    <p>Nada foi interpretado ou filtrado. Tudo foi copiado como dados brutos.</p>
+
+    <h2 id="sec-tamanho-imagem" class="post-section">Verificação do Tamanho da Imagem</h2>
+    <p>Após a criação da imagem, foi verificado o tamanho do arquivo gerado:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-ls-image">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-ls-image">ls -lh pendrive.img</code></pre>
+    </div>
+    <p>Resultado:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/ls-image-output.png" alt="Saída do comando ls -lh pendrive.img no terminal">
+    </figure>
+    <p>Embora o sistema mostre “15G”, isso ocorre porque está utilizando a unidade GiB (gibibytes), que é baseada em potências de 1024. O valor em bytes obtido anteriormente confirma o tamanho real de 16.008.609.792 bytes.</p>
+    <p>A correspondência entre o tamanho do dispositivo e o tamanho da imagem indica que a cópia foi fiel e integral.</p>
+
+    <h2 id="sec-sha256" class="post-section">Verificação de Integridade com SHA-256</h2>
+    <p>Após a criação da imagem, foi gerado um hash criptográfico SHA-256:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-sha256">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-sha256">sha256sum pendrive.img</code></pre>
+    </div>
+    <p>Resultado:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/sha256-output.png" alt="Saída do comando sha256sum pendrive.img no terminal">
+    </figure>
+    <p>O SHA-256 é uma função matemática que processa um conjunto de dados de qualquer tamanho e produz uma saída fixa de 256 bits, representada em formato hexadecimal. Independentemente de o arquivo possuir alguns kilobytes ou vários gigabytes, o resultado sempre terá o mesmo comprimento. Essa característica permite que o hash funcione como uma identificação única do conteúdo analisado.</p>
+    <p>Ao registrar o valor do hash imediatamente após a criação da imagem, estabelece-se um ponto de verificação confiável. Em qualquer momento futuro, é possível recalcular o SHA-256 da imagem e comparar com o valor original. Se ambos coincidirem, há garantia matemática de que o arquivo permanece inalterado.</p>
+    <p>Esse procedimento transforma a imagem adquirida em um artefato verificável. Ele assegura que toda análise subsequente seja realizada sobre uma cópia íntegra e preservada, eliminando dúvidas quanto à autenticidade dos dados examinados.</p>
+
+    <h2 id="sec-fs" class="post-section">Identificação do Sistema de Arquivos</h2>
+    <p>Com a imagem <code>pendrive.img</code> criada e validada por meio do hash criptográfico, o próximo passo consiste em compreender como os dados estão organizados internamente. Para isso, é necessário identificar o sistema de arquivos presente na mídia, pois toda a lógica de recuperação dependerá dessa estrutura.</p>
+    <p>A análise foi realizada com o comando:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-fsstat">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-fsstat">fsstat pendrive.img</code></pre>
+    </div>
+    <p>A ferramenta <code>fsstat</code>, integrante do Sleuth Kit, examina diretamente as estruturas internas do sistema de arquivos contido na imagem, interpretando seus metadados e apresentando informações sobre layout, organização e parâmetros estruturais.</p>
+    <p>A saída revelou que o dispositivo utiliza o sistema de arquivos <span class="cite-word">FAT32<span class="cite-tip">FAT32 é um sistema de arquivos leve e compatível com vários sistemas operacionais, muito comum em pendrives e cartões de memória.</span></span>:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fsstat-output.png" alt="Saída do comando fsstat pendrive.img no terminal">
+    </figure>
+    <p>A identificação do <span class="cite-word">FAT32<span class="cite-tip">No FAT32, os arquivos são mapeados por uma tabela de alocação, com estrutura simples e sem journaling.</span></span> é particularmente relevante porque esse sistema de arquivos possui uma arquitetura mais simples quando comparado a sistemas como <span class="cite-word">NTFS<span class="cite-tip">NTFS é o sistema de arquivos padrão do Windows, com recursos avançados como journaling, permissões e recuperação.</span></span> ou <span class="cite-word">EXT4<span class="cite-tip">EXT4 é um sistema de arquivos comum em Linux, com journaling e melhor tolerância a falhas em uso diário.</span></span>. Ele não implementa journaling e mantém uma estrutura baseada em tabelas de alocação, o que influencia diretamente a forma como arquivos apagados podem ser recuperados.</p>
+    <p>O <span class="cite-word">FAT32<span class="cite-tip">A estrutura FAT32 registra cadeias de clusters na File Allocation Table (FAT) para localizar o conteúdo dos arquivos.</span></span> organiza o armazenamento por meio de uma estrutura chamada File Allocation Table (FAT). Essa tabela funciona como um mapa que indica quais clusters pertencem a cada arquivo e em que ordem eles devem ser lidos. Quando um arquivo é criado, o sistema registra na FAT uma cadeia de clusters que compõe seu conteúdo. Quando o arquivo é apagado, essa cadeia é removida ou marcada como disponível, mas os dados físicos permanecem até serem sobrescritos.</p>
+    <p>A saída do <code>fsstat</code> também forneceu informações estruturais importantes:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fsstat-content-output.png" alt="Informações de conteúdo do fsstat com setor e cluster">
+    </figure>
+    <p>Esses valores indicam que cada setor possui 512 bytes e que cada cluster possui 8192 bytes, ou seja, 8 KB. Isso significa que cada cluster é composto por 16 setores físicos. Essa relação é essencial para compreender o comportamento do sistema durante exclusões e fragmentações.</p>
+    <p>Em sistemas FAT32, a unidade mínima de alocação é o cluster. Mesmo que um arquivo utilize apenas alguns bytes, ele ocupará pelo menos um cluster inteiro. Quando um arquivo é removido, o sistema marca o cluster como livre, mas não apaga seu conteúdo imediatamente. Se o cluster não for reutilizado, os dados ainda podem ser recuperados integralmente.</p>
+    <p>A análise estrutural também mostrou como o disco está organizado internamente:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fsstat-fat-area-output.png" alt="Trecho do fsstat mostrando FAT 0, FAT 1 e Data Area">
+    </figure>
+    <p>Essa informação indica que existem duas cópias da File Allocation Table, prática comum no FAT32 para redundância estrutural. A área real onde os dados dos arquivos estão armazenados começa a partir do setor 32768, dentro da chamada Data Area.</p>
+    <p>É dentro dessa região que ocorrerá qualquer processo de recuperação de conteúdo, seja por meio da reconstrução da cadeia de clusters ainda registrada na FAT ou por meio da análise direta do espaço bruto da imagem.</p>
+    <p>Outro dado relevante apresentado foi a contagem de setores livres, que aponta a quantidade de espaço atualmente marcado como disponível. Quanto maior essa quantidade, maior a probabilidade de existirem dados apagados ainda não sobrescritos.</p>
+    <p>Neste ponto da análise, já se sabe que o dispositivo utiliza FAT32, que os clusters possuem 8 KB e que os dados começam a partir do setor 32768. Essas informações estabelecem o contexto estrutural necessário para iniciar a próxima etapa: a listagem de arquivos existentes e a identificação de possíveis entradas marcadas como excluídas.</p>
+
+    <h2 class="post-section">Listagem da Estrutura de Arquivos</h2>
+    <p>Com a estrutura do sistema de arquivos identificada, o próximo passo consiste em examinar como os arquivos estão organizados dentro da imagem do dispositivo. Essa análise permite compreender a hierarquia de diretórios presente no sistema e identificar possíveis registros associados a arquivos que foram removidos.</p>
+    <p>Para realizar essa inspeção foi utilizada a ferramenta <code>fls</code>, pertencente ao conjunto de utilitários do Sleuth Kit. Essa ferramenta permite listar entradas de diretório diretamente a partir da estrutura do sistema de arquivos contida na imagem, sem depender do sistema operacional para interpretar os dados.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-fls">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-fls">fls -r pendrive.img</code></pre>
+    </div>
+    <p>O parâmetro <code>-r</code> instrui a ferramenta a realizar uma listagem recursiva, percorrendo todos os diretórios existentes no sistema de arquivos e exibindo seus conteúdos. Dessa forma, é possível visualizar não apenas os arquivos presentes no diretório raiz, mas também aqueles armazenados em subdiretórios.</p>
+    <p>A saída obtida revelou diversos arquivos e diretórios registrados na estrutura FAT32 do dispositivo. Um trecho da listagem é apresentado a seguir:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fls-output.png" alt="Saída do comando fls -r pendrive.img no terminal">
+    </figure>
+
+    <h2 class="post-section">Interpretação das Entradas do Sistema</h2>
+    <p>Cada linha exibida pelo <code>fls</code> corresponde a um registro armazenado no sistema de arquivos. Esses registros são as entradas de diretório que descrevem os arquivos existentes ou que já estiveram presentes no dispositivo.</p>
+    <p>A estrutura apresentada na saída segue um padrão específico. Os primeiros caracteres indicam o tipo de entrada, enquanto o número apresentado após essa identificação corresponde ao identificador interno utilizado pelo sistema de arquivos para localizar o conteúdo armazenado nos clusters.</p>
+    <p>No trecho observado, por exemplo:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/fls-entries-output.png" alt="Trecho da saída do fls com exemplos de entradas de sistema">
+    </figure>
+    <p>Essa linha contém diversas informações relevantes que precisam ser interpretadas individualmente.</p>
+    <p>Os primeiros caracteres da linha indicam o tipo da entrada dentro do sistema de arquivos. No exemplo apresentado, aparecem dois indicadores separados por uma barra: <code>r/r</code>.</p>
+    <p>O primeiro caractere representa o tipo de objeto identificado. A letra <code>r</code> indica que se trata de um arquivo regular (<em>regular file</em>). Caso fosse um diretório, por exemplo, a letra exibida seria <code>d</code>, indicando uma entrada do tipo diretório (<em>directory</em>). Em sistemas de arquivos analisados pelo Sleuth Kit, essa convenção permite diferenciar rapidamente arquivos comuns de pastas ou outros tipos de estruturas.</p>
+    <p>O segundo indicador, após a barra, também aparece como <code>r</code>. Esse segundo marcador refere-se ao tipo de entrada registrado dentro do sistema de arquivos. Em sistemas FAT, ele geralmente confirma que a entrada corresponde a um arquivo regular registrado na estrutura de diretórios.</p>
+    <p>Logo após esses indicadores aparece um símbolo extremamente importante: o asterisco (<code>*</code>).</p>
+    <p>Esse símbolo indica que o arquivo foi removido do sistema de arquivos, ou seja, sua entrada de diretório foi marcada como excluída. No FAT32, quando um arquivo é apagado, o sistema não remove imediatamente os dados armazenados no disco. Em vez disso, o primeiro caractere do nome do arquivo é substituído por um marcador especial que indica que aquela entrada está disponível para reutilização.</p>
+    <p>Enquanto essa entrada não for sobrescrita e os clusters associados ao arquivo não forem reutilizados por novos dados, o conteúdo original do arquivo permanece fisicamente presente no dispositivo. É exatamente esse comportamento que torna possível a recuperação de arquivos apagados.</p>
+    <p>Após o asterisco aparece o número <code>11</code>, que representa o identificador interno da entrada no sistema de arquivos. Esse identificador funciona como uma referência utilizada pelas ferramentas do Sleuth Kit para localizar os clusters associados ao arquivo dentro da imagem analisada.</p>
+    <p>Esse número não é apenas um índice visual; ele permite acessar diretamente o conteúdo armazenado nos clusters relacionados àquela entrada. É justamente esse identificador que será utilizado posteriormente pela ferramenta <code>icat</code> para extrair o arquivo da imagem.</p>
+    <p>O caractere dois-pontos (<code>:</code>) atua apenas como separador entre o identificador interno e o nome do arquivo registrado na entrada de diretório.</p>
+    <p>Por fim, aparece o nome original do arquivo, que neste caso é <code>IMG_20250808_070103_264.jpg</code>. Esse nome é recuperado diretamente da entrada de diretório presente no sistema FAT32.</p>
+    <p>Ao reunir todas essas informações, é possível interpretar completamente a linha apresentada:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Interpretação</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>r/r</code></span>
+        <span>indica que se trata de um arquivo regular registrado no sistema de arquivos</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>*</code></span>
+        <span>indica que o arquivo foi removido</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>11</code></span>
+        <span>representa o identificador interno da entrada</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>IMG_20250808_070103_264.jpg</code></span>
+        <span>é o nome original do arquivo</span>
+      </div>
+    </div>
+    <p>Essa combinação de elementos revela algo extremamente importante para a análise: embora o arquivo não esteja mais acessível pelo sistema operacional, sua entrada estrutural ainda existe no sistema de arquivos. Isso significa que os clusters associados ao arquivo ainda podem ser acessados diretamente a partir da imagem do dispositivo.</p>
+    <p>Em outras palavras, a presença dessa entrada indica uma alta probabilidade de recuperação do arquivo.</p>
+
+    <h2 class="post-section">Recuperação da Imagem Apagada</h2>
+    <p>Após identificar na listagem do <code>fls</code> a entrada correspondente à imagem <code>IMG_20250808_070103_264.jpg</code>, o próximo passo foi recuperar seu conteúdo diretamente a partir da imagem do dispositivo.</p>
+    <p>Para isso foi utilizada a ferramenta <code>icat</code>, também pertencente ao Sleuth Kit. Essa ferramenta permite extrair o conteúdo associado a uma entrada do sistema de arquivos utilizando o identificador interno exibido na saída do <code>fls</code>.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-icat">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-icat">icat pendrive.img 11 &gt; imagem_recuperada.jpg</code></pre>
+    </div>
+    <p>Nesse comando, <code>pendrive.img</code> corresponde à imagem bit a bit criada anteriormente, enquanto o número <code>11</code> representa o identificador interno da entrada do arquivo dentro do sistema de arquivos FAT32. A ferramenta utiliza esse identificador para localizar os clusters associados ao arquivo e reconstruir seu conteúdo.</p>
+    <p>O símbolo <code>&gt;</code> redireciona a saída do comando para um novo arquivo chamado <code>imagem_recuperada.jpg</code>, que passa a conter os dados recuperados.</p>
+
+    <h2 class="post-section">Verificação do Tipo de Arquivo</h2>
+    <p>Com o arquivo recuperado, o primeiro passo foi verificar se o conteúdo realmente corresponde a uma imagem válida. Para isso foi utilizado o comando <code>file</code>, que identifica o tipo de arquivo analisando sua assinatura binária.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-file">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-file">file imagem_recuperada.jpg</code></pre>
+    </div>
+    <p>A saída obtida foi:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/file-output.png" alt="Saída do comando file imagem_recuperada.jpg no terminal">
+    </figure>
+    <p>Essa informação confirma que o arquivo recuperado é uma imagem JPEG válida e que contém metadados <span class="cite-word">EXIF<span class="cite-tip">EXIF (Exchangeable Image File Format) é um conjunto de metadados gravados em imagens digitais, incluindo dados como data/hora, modelo da câmera, resolução e parâmetros de captura.</span></span> embutidos. Esses metadados são extremamente importantes porque armazenam informações técnicas geradas automaticamente pelo dispositivo que capturou a imagem.</p>
+    <p>Entre os dados identificados já é possível observar informações como resolução da imagem, fabricante do dispositivo e modelo da câmera.</p>
+
+    <h2 class="post-section">Análise de Metadados da Imagem</h2>
+    <p>Para obter informações mais detalhadas sobre o arquivo recuperado foi utilizada a ferramenta <code>exiftool</code>, amplamente utilizada para leitura de metadados em arquivos multimídia.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-exiftool">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-exiftool">exiftool imagem_recuperada.jpg</code></pre>
+    </div>
+    <p>A análise revelou diversas informações relevantes sobre a imagem recuperada.</p>
+    <p>Entre os metadados identificados está o dispositivo utilizado para capturar a fotografia:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-device-output.png" alt="Trecho do exiftool mostrando fabricante e modelo da câmera">
+    </figure>
+    <p>Esses dados indicam que a imagem foi capturada por um smartphone CUBOT P80.</p>
+    <p>Outro conjunto de informações importante refere-se à data e hora em que a fotografia foi registrada:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-datetime-output.png" alt="Trecho do exiftool mostrando Create Date, Date/Time Original e Modify Date">
+    </figure>
+    <p>Esses campos são gerados automaticamente pelo dispositivo no momento da captura e indicam que a imagem foi registrada no dia 8 de agosto de 2025 às 07:01:03.</p>
+    <p>Também foi possível identificar parâmetros técnicos relacionados à captura da imagem, como tempo de exposição, abertura e sensibilidade ISO.</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-camera-params-output.png" alt="Trecho do exiftool com parâmetros técnicos de captura como abertura, ISO e tempo de exposição">
+    </figure>
+    <p>Esses valores descrevem as condições em que a fotografia foi capturada. O tempo de exposição de 1/60 de segundo indica que a câmera utilizou uma velocidade relativamente rápida do obturador, enquanto a abertura f/1.8 indica que a lente estava configurada para permitir uma entrada significativa de luz.</p>
+    <p>Outro dado importante é a resolução da imagem recuperada:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-resolution-output.png" alt="Trecho do exiftool mostrando largura, altura e tamanho da imagem recuperada">
+    </figure>
+    <p>Isso revela que a imagem possui resolução de 6000 × 8000 pixels, totalizando aproximadamente 48 megapixels. Essa resolução é compatível com sensores utilizados em smartphones modernos.</p>
+    <p>Também foi possível identificar o software responsável pelo processamento da imagem:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-software-output.png" alt="Trecho do exiftool mostrando o software responsável pelo processamento da imagem">
+    </figure>
+    <p>Esse dado indica que a imagem foi processada pela aplicação de câmera padrão baseada na plataforma <span class="cite-word">MediaTek<span class="cite-tip">MediaTek é uma empresa de semicondutores que desenvolve chipsets para smartphones e outros dispositivos, incluindo processadores de imagem e componentes de câmera.</span></span>.</p>
+
+    <h2 class="post-section">Identificação de Localização através de Metadados</h2>
+    <p>Além de informações relacionadas ao dispositivo e às configurações da câmera, muitas imagens digitais podem armazenar dados de geolocalização diretamente em seus metadados. Essas informações fazem parte da estrutura <span class="cite-word">EXIF<span class="cite-tip">EXIF (Exchangeable Image File Format) é um conjunto de metadados gravados em imagens digitais, incluindo dados como data/hora, modelo da câmera, resolução e parâmetros de captura.</span></span> (Exchangeable Image File Format), um conjunto de campos que registra automaticamente diversos parâmetros no momento em que a fotografia é capturada.</p>
+    <p>Quando um dispositivo possui acesso ao GPS e essa funcionalidade está ativa durante a captura da imagem, as coordenadas geográficas do local podem ser registradas junto ao arquivo. Esses dados são armazenados em campos específicos da estrutura EXIF, normalmente identificados como <code>GPSLatitude</code> e <code>GPSLongitude</code>.</p>
+    <p>Para verificar se a imagem recuperada continha esse tipo de informação, foi utilizada novamente a ferramenta <code>exiftool</code>, que permite extrair metadados detalhados diretamente do arquivo.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-exif-gps">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-exif-gps">exiftool -gps:all imagem_recuperada.jpg</code></pre>
+    </div>
+    <p>Esse comando instrui a ferramenta a exibir exclusivamente os campos relacionados à geolocalização presentes na imagem.</p>
+    <p>A análise revelou a presença dos seguintes metadados:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-gps-output.png" alt="Saída do exiftool com campos de geolocalização da imagem recuperada">
+    </figure>
+    <p>Esses valores representam as coordenadas geográficas associadas ao local onde a fotografia foi registrada. As coordenadas estão armazenadas no formato tradicional de graus, minutos e segundos, utilizado em sistemas de navegação e georreferenciamento.</p>
+    <p>Para facilitar a visualização dessas informações, também foi utilizado o comando:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-exif-gps-position">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-exif-gps-position">exiftool -gpsposition imagem_recuperada.jpg</code></pre>
+    </div>
+    <p>Esse comando apresenta a posição geográfica combinando latitude e longitude em um único campo:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-gps-position-output.png" alt="Saída do exiftool com GPS Position em campo único">
+    </figure>
+    <h2 class="post-section">Conversão de Coordenadas para Formato Decimal</h2>
+    <p>As coordenadas extraídas da imagem foram apresentadas no formato graus, minutos e segundos (DMS):</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>GPS Latitude</span>
+        <span><code>22° 58' 45.12"</code></span>
+      </div>
+      <div class="device-summary-row">
+        <span>GPS Longitude</span>
+        <span><code>49° 52' 12.00"</code></span>
+      </div>
+    </div>
+    <p>Esse formato é amplamente utilizado em sistemas de navegação e cartografia. No entanto, a maioria dos serviços de mapas, como Google Maps ou OpenStreetMap, utiliza coordenadas no formato decimal.</p>
+    <p>Para converter as coordenadas do formato DMS para decimal, utiliza-se a seguinte fórmula:</p>
+    <div class="formula-box" aria-label="Fórmula de conversão de graus, minutos e segundos para decimal">
+      <div class="formula-eq">
+        <span class="formula-term">Decimal</span>
+        <span class="formula-op">=</span>
+        <span class="formula-term">Graus</span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">Minutos</span>
+          <span class="den">60</span>
+        </span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">Segundos</span>
+          <span class="den">3600</span>
+        </span>
+      </div>
+    </div>
+    <h2 class="post-section">Conversão da Latitude</h2>
+    <p>Latitude extraída:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Latitude (DMS)</span>
+        <span><code>22° 58' 45.12"</code></span>
+      </div>
+    </div>
+    <p>Aplicando a fórmula:</p>
+    <div class="formula-box" aria-label="Aplicação da fórmula de conversão da latitude">
+      <div class="formula-eq">
+        <span class="formula-term">22</span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">58</span>
+          <span class="den">60</span>
+        </span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">45.12</span>
+          <span class="den">3600</span>
+        </span>
+      </div>
+    </div>
+    <p>Calculando cada parte:</p>
+    <div class="formula-box" aria-label="Cálculo da fração minutos dividido por 60">
+      <div class="formula-eq">
+        <span class="formula-frac">
+          <span class="num">58</span>
+          <span class="den">60</span>
+        </span>
+        <span class="formula-op">=</span>
+        <span class="formula-term">0.9667</span>
+      </div>
+    </div>
+    <div class="formula-box" aria-label="Cálculo da fração segundos dividido por 3600">
+      <div class="formula-eq">
+        <span class="formula-frac">
+          <span class="num">45.12</span>
+          <span class="den">3600</span>
+        </span>
+        <span class="formula-op">=</span>
+        <span class="formula-term">0.012533</span>
+      </div>
+    </div>
+    <p>Somando os valores:</p>
+    <div class="formula-box" aria-label="Soma final dos componentes da latitude em formato decimal">
+      <div class="formula-eq">
+        <span class="formula-term">22</span>
+        <span class="formula-op">+</span>
+        <span class="formula-term">0.9667</span>
+        <span class="formula-op">+</span>
+        <span class="formula-term">0.012533</span>
+      </div>
+    </div>
+    <p>Resultado:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Latitude (decimal)</span>
+        <span><code>22.979233°</code></span>
+      </div>
+    </div>
+    <p>Como a coordenada corresponde ao hemisfério Sul, o valor deve ser representado como negativo:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Latitude final</span>
+        <span><code>-22.979233</code></span>
+      </div>
+    </div>
+    <h2 class="post-section">Conversão da Longitude</h2>
+    <p>Longitude extraída:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Longitude (DMS)</span>
+        <span><code>49° 52' 12.00"</code></span>
+      </div>
+    </div>
+    <p>Aplicando a fórmula:</p>
+    <div class="formula-box" aria-label="Aplicação da fórmula de conversão da longitude">
+      <div class="formula-eq">
+        <span class="formula-term">49</span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">52</span>
+          <span class="den">60</span>
+        </span>
+        <span class="formula-op">+</span>
+        <span class="formula-frac">
+          <span class="num">12</span>
+          <span class="den">3600</span>
+        </span>
+      </div>
+    </div>
+    <p>Calculando:</p>
+    <div class="formula-box" aria-label="Cálculo da fração minutos da longitude">
+      <div class="formula-eq">
+        <span class="formula-frac">
+          <span class="num">52</span>
+          <span class="den">60</span>
+        </span>
+        <span class="formula-op">=</span>
+        <span class="formula-term">0.8667</span>
+      </div>
+    </div>
+    <div class="formula-box" aria-label="Cálculo da fração segundos da longitude">
+      <div class="formula-eq">
+        <span class="formula-frac">
+          <span class="num">12</span>
+          <span class="den">3600</span>
+        </span>
+        <span class="formula-op">=</span>
+        <span class="formula-term">0.003333</span>
+      </div>
+    </div>
+    <p>Somando os valores:</p>
+    <div class="formula-box" aria-label="Soma final dos componentes da longitude em formato decimal">
+      <div class="formula-eq">
+        <span class="formula-term">49</span>
+        <span class="formula-op">+</span>
+        <span class="formula-term">0.8667</span>
+        <span class="formula-op">+</span>
+        <span class="formula-term">0.003333</span>
+      </div>
+    </div>
+    <p>Resultado:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Longitude (decimal)</span>
+        <span><code>49.870033°</code></span>
+      </div>
+    </div>
+    <p>Como essa coordenada está no hemisfério Oeste, o valor também deve ser representado como negativo:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Longitude final</span>
+        <span><code>-49.870033</code></span>
+      </div>
+    </div>
+    <h2 class="post-section">Visualizando a Localização no Mapa</h2>
+    <p>Uma vez obtidas as coordenadas no formato decimal, torna-se possível utilizá-las diretamente em serviços de mapas para visualizar o local associado à captura da imagem.</p>
+    <p>Uma forma simples de fazer isso é construir um link utilizando o formato aceito pelo Google Maps:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Serviço</span>
+        <span>Link</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Google Maps</span>
+        <span><a href="https://www.google.com/maps?q=-22.979233,-49.870033" target="_blank" rel="noopener noreferrer">https://www.google.com/maps?q=-22.979233,-49.870033</a></span>
+      </div>
+    </div>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/google-maps-location-output.png" alt="Visualização das coordenadas convertidas no Google Maps">
+    </figure>
+    <p>Diferentemente do formato tradicional utilizado em navegação, que separa graus, minutos e segundos, a representação decimal permite que a posição seja interpretada diretamente por aplicações e APIs de geolocalização.</p> 
+    <p>Ao acessar esse endereço em um navegador, o serviço de mapas interpreta automaticamente as coordenadas fornecidas e posiciona o marcador exatamente no ponto geográfico correspondente.</p>
+    <h2 class="post-section">Análise Estrutural do Arquivo JPEG em Hexadecimal</h2>
+    <p>Após a recuperação da imagem e a análise de seus metadados, é possível aprofundar ainda mais a investigação examinando diretamente a estrutura binária do arquivo. Essa abordagem permite compreender como o formato JPEG é organizado internamente e identificar os marcadores que delimitam o início e o fim da imagem.</p>
+    <p>Arquivos JPEG possuem uma estrutura bem definida baseada em marcadores binários específicos. Esses marcadores são representados em hexadecimal e indicam diferentes partes da estrutura do arquivo, como cabeçalhos, metadados e dados comprimidos da imagem.</p>
+    <p>Para visualizar o conteúdo binário da imagem recuperada foi utilizado o comando:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-hexdump-head">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-hexdump-head">hexdump -C imagem_recuperada.jpg | head</code></pre>
+    </div>
+    <p>Esse comando exibe os primeiros bytes do arquivo em formato hexadecimal e ASCII, permitindo observar diretamente a assinatura do formato JPEG.</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/hexdump-head-output.png" alt="Saída do comando hexdump -C imagem_recuperada.jpg | head">
+    </figure>
+    <h2 class="post-section">Identificação da Assinatura do Arquivo</h2>
+    <p>Ao analisar os primeiros bytes do arquivo, é possível identificar a assinatura característica do formato JPEG:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Assinatura</span>
+        <span>Descrição</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>FF D8 FF</code></span>
+        <span>Início da estrutura binária de um arquivo JPEG</span>
+      </div>
+    </div>
+    <p>Essa sequência representa o marcador Start Of Image (SOI), que indica o início de um arquivo JPEG. Esse marcador é utilizado por sistemas e ferramentas de análise para reconhecer automaticamente o tipo de arquivo.</p>
+    <p>A presença dessa assinatura confirma que o arquivo recuperado possui uma estrutura válida de imagem JPEG.</p>
+    <p>Logo após o marcador inicial, normalmente aparecem outros marcadores responsáveis por armazenar informações adicionais sobre a imagem, como metadados EXIF, tabelas de quantização e parâmetros de compressão.</p>
+    <h2 class="post-section">Estrutura EXIF dentro do JPEG</h2>
+    <p>Logo após a assinatura inicial, muitos arquivos JPEG armazenam metadados no formato EXIF. Esses metadados incluem informações como:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo EXIF</span>
+        <span>Exemplo de informação</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Dispositivo</span>
+        <span>modelo do dispositivo</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Data/Hora</span>
+        <span>data e hora da captura</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Captura</span>
+        <span>parâmetros da câmera</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Localização</span>
+        <span>coordenadas GPS</span>
+      </div>
+      <div class="device-summary-row">
+        <span>Imagem</span>
+        <span>resolução da imagem</span>
+      </div>
+    </div>
+    <p>Essas informações são armazenadas em um bloco estruturado semelhante ao formato TIFF, que também pode ser identificado na análise hexadecimal.</p>
+    <p>No caso da imagem recuperada, esses dados foram confirmados anteriormente através do exiftool, que revelou informações sobre o dispositivo utilizado (CUBOT P80), a data de captura e as coordenadas geográficas registradas no momento da fotografia.</p>
+    <h2 class="post-section">Identificação do Final do Arquivo</h2>
+    <p>Assim como existe um marcador que indica o início da imagem, o formato JPEG também possui um marcador específico que indica o término do arquivo.</p> 
+    <p>Para verificar o final do arquivo recuperado, pode-se utilizar o comando:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-hexdump-tail">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-hexdump-tail">hexdump -C imagem_recuperada.jpg | tail</code></pre>
+    </div>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/hexdump-tail-output.png" alt="Saída do comando hexdump -C imagem_recuperada.jpg | tail">
+    </figure>
+    <p>Esse marcador é representado pela sequência hexadecimal:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Marcador</span>
+        <span>Valor Hexadecimal</span>
+      </div>
+      <div class="device-summary-row">
+        <span>End Of Image (EOI)</span>
+        <span><code>FF D9</code></span>
+      </div>
+    </div>
+    <p>Esse valor corresponde ao marcador End Of Image (EOI). A presença dele confirma que o arquivo JPEG foi recuperado de forma completa e que sua estrutura não está corrompida.</p>
+    <h2 class="post-section">Localização de Assinaturas JPEG no Disco Bruto</h2>
+    <p>Após a recuperação da imagem utilizando as estruturas do sistema de arquivos, é possível aprofundar a análise utilizando uma técnica conhecida como data carving. Diferentemente da recuperação baseada em metadados, essa abordagem não depende da estrutura do sistema de arquivos. Em vez disso, ela procura diretamente por padrões binários característicos de determinados tipos de arquivos dentro dos dados brutos armazenados na mídia.</p>
+    <p>No caso de imagens JPEG, existe uma assinatura binária específica que marca o início da estrutura do arquivo. Essa assinatura é representada pela sequência hexadecimal:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Assinatura</span>
+        <span>Descrição</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>FF D8 FF</code></span>
+        <span>Start Of Image (SOI) de arquivos JPEG</span>
+      </div>
+    </div>
+    <p>Essa sequência corresponde ao marcador Start Of Image (SOI), que indica o início de um arquivo JPEG. Ao localizar esse padrão dentro da imagem do dispositivo, é possível identificar pontos onde potencialmente existe uma imagem armazenada.</p>
+    <p>Para realizar essa busca diretamente na imagem do pendrive foi utilizado o seguinte comando:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-grep-jpeg-sign">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-grep-jpeg-sign">grep -oba $'\xff\xd8\xff' pendrive.img</code></pre>
+    </div>
+    <p>Esse comando utiliza a ferramenta <code>grep</code> para procurar a sequência binária correspondente à assinatura JPEG dentro do arquivo <code>pendrive.img</code>, que representa a cópia bit a bit do dispositivo.</p>
+    <p>Os parâmetros utilizados possuem funções específicas.</p>
+    <p>O parâmetro <code>-o</code> instrui o <code>grep</code> a exibir apenas a sequência encontrada, em vez de mostrar toda a linha onde ela aparece. Isso facilita a visualização das ocorrências exatas da assinatura dentro do arquivo analisado.</p>
+    <p>O parâmetro <code>-b</code> faz com que o <code>grep</code> mostre o <code>offset</code>, ou seja, a posição em bytes dentro do arquivo onde a sequência foi encontrada. Esse valor é extremamente importante, pois indica exatamente onde a assinatura aparece dentro da imagem do disco.</p>
+    <p>Já o parâmetro <code>-a</code> força o <code>grep</code> a tratar o arquivo analisado como texto, mesmo que ele contenha dados binários. Como a imagem de um dispositivo de armazenamento contém dados brutos e não apenas texto legível, esse parâmetro é necessário para evitar que o <code>grep</code> interrompa a leitura ao encontrar bytes considerados não textuais.</p>
+    <p>A sequência utilizada na busca:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Expressão</span>
+        <span>Finalidade</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>$'\xff\xd8\xff'</code></span>
+        <span>Representa em hexadecimal a assinatura binária do início de arquivos JPEG</span>
+      </div>
+    </div>
+    <p><code>$'\xff\xd8\xff'</code> representa a assinatura JPEG em formato hexadecimal. O prefixo <code>$' '</code> permite que caracteres binários sejam interpretados corretamente pelo shell, garantindo que o <code>grep</code> procure exatamente pelos bytes <code>FF D8 FF</code>.</p>
+    <h2 class="post-section">Resultados da Busca</h2>
+    <p>A execução do comando retornou as seguintes posições dentro da imagem do dispositivo:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/grep-jpeg-signatures-output.png" alt="Saída do comando grep -oba com offsets de assinaturas JPEG em pendrive.img">
+    </figure>
+    <p>Cada um desses valores corresponde ao offset em bytes dentro da imagem <code>pendrive.img</code> onde a assinatura JPEG foi encontrada. Esses offsets representam pontos onde potencialmente existem imagens armazenadas no dispositivo.</p>
+    <p>A partir dessas posições é possível iniciar a extração de dados diretamente da imagem do disco para verificar se existe um arquivo JPEG completo associado a cada uma dessas assinaturas.</p>
+    <h2 class="post-section">Por que aparecem caracteres como "���"</h2>
+    <p>Na saída do comando também aparecem caracteres como:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Representação exibida</span>
+        <span>Contexto</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>���</code></span>
+        <span>Interpretação textual de bytes binários não imprimíveis</span>
+      </div>
+    </div>
+    <p>Esses caracteres não fazem parte do conteúdo real do arquivo JPEG. Eles aparecem porque o <code>grep</code> tenta exibir os bytes encontrados interpretando-os como caracteres de texto.</p>
+    <p>Como a sequência <code>FF D8 FF</code> corresponde a valores binários fora do conjunto de caracteres ASCII imprimíveis, o terminal não consegue representá-los corretamente. Quando isso ocorre, o sistema exibe símbolos substitutos como <code>�</code>, que indicam bytes não representáveis como texto.</p>
+    <p>Em outras palavras, esses caracteres não possuem significado textual; eles apenas representam dados binários que o terminal não consegue mostrar de forma legível.</p>
+    <p>Esse comportamento é esperado quando se utiliza ferramentas de busca textual para analisar arquivos binários.</p>
+    <h2 class="post-section">Extração de uma Imagem a partir de um Offset Identificado</h2>
+    <p>Após a identificação de múltiplas ocorrências da assinatura JPEG dentro da imagem do dispositivo, torna-se possível tentar reconstruir arquivos diretamente a partir dessas posições. Cada offset retornado pelo comando de busca representa um ponto onde foi encontrada a sequência hexadecimal <code>FF D8 FF</code>, indicando o possível início de uma imagem JPEG.</p>
+    <p>Entre os valores identificados durante a análise, um dos offsets encontrados foi:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Offset identificado</span>
+        <span>Unidade</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>16838741</code></span>
+        <span>bytes</span>
+      </div>
+    </div>
+    <p>Esse valor representa a posição em bytes dentro da imagem <code>pendrive.img</code> onde a assinatura de início de um arquivo JPEG foi localizada. A partir desse ponto é possível iniciar a extração de dados diretamente do disco bruto para verificar se existe uma imagem completa armazenada naquela região.</p>
+    <p>Para realizar essa extração foi utilizado o comando <code>dd</code>, que permite copiar dados diretamente a partir de posições específicas dentro de um arquivo ou dispositivo.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-dd-carved-image">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-dd-carved-image">dd if=pendrive.img of=carved_image1.jpg bs=1 skip=16838741 count=5000000</code></pre>
+    </div>
+    <p>Nesse comando, <code>if=pendrive.img</code> define a imagem do dispositivo como fonte de leitura, enquanto <code>of=carved_image1.jpg</code> especifica o arquivo que receberá os dados extraídos. O parâmetro <code>skip=16838741</code> instrui o <code>dd</code> a ignorar os primeiros 16.838.741 bytes da imagem e iniciar a leitura exatamente na posição onde foi encontrada a assinatura JPEG.</p>
+    <p>O parâmetro <code>count=5000000</code> define a quantidade de bytes que será copiada a partir desse ponto. Nesse exemplo, foram extraídos aproximadamente 5 MB de dados, valor suficiente para incluir toda a estrutura de uma imagem JPEG em muitos casos.</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/dd-carved-image-output.png" alt="Saída do comando dd para extração da imagem a partir do offset identificado">
+    </figure>
+    <h2 class="post-section">Verificação do Arquivo Extraído</h2>
+    <p>Após a extração, o próximo passo consiste em verificar se os dados obtidos realmente correspondem a uma imagem JPEG válida. Para isso foi utilizado o comando <code>file</code>, que identifica o tipo de arquivo analisando sua assinatura binária.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-file-carved-image">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-file-carved-image">file carved_image1.jpg</code></pre>
+    </div>
+    <p>Se a extração tiver capturado corretamente uma estrutura JPEG válida, a saída do comando deverá indicar que o arquivo corresponde a uma imagem JPEG.</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/file-carved-image-output.png" alt="Saída do comando file carved_image1.jpg confirmando imagem JPEG válida">
+    </figure>
+    <h2 class="post-section">Análise de Metadados da Imagem Recuperada</h2>
+    <p>Após a extração da imagem a partir do offset identificado no disco bruto, foi realizada uma análise de metadados utilizando a ferramenta <code>exiftool</code>. Essa ferramenta permite examinar as informações estruturais presentes no arquivo e identificar possíveis dados adicionais armazenados no formato EXIF.</p>
+    <p>O comando executado foi:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-exiftool-carved-image">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-exiftool-carved-image">exiftool carved_image1.jpg</code></pre>
+    </div>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/exiftool-carved-image-output.png" alt="Saída do comando exiftool carved_image1.jpg com metadados da imagem extraída">
+    </figure>
+    <p>A análise revelou que o arquivo recuperado corresponde a uma imagem JPEG válida, contendo informações básicas relacionadas à estrutura do arquivo e às características da imagem.</p>
+    <p>Entre os dados identificados estão informações como o formato do arquivo, resolução da imagem e parâmetros de codificação utilizados na compressão JPEG. A saída também indica que o arquivo utiliza codificação Baseline DCT com compressão Huffman, que é o método de compressão mais comum utilizado em imagens JPEG.</p>
+    <p>Outro dado relevante identificado foi a resolução da imagem:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Campo</span>
+        <span>Valor</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Image Width</code></span>
+        <span><code>640</code></span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>Image Height</code></span>
+        <span><code>264</code></span>
+      </div>
+    </div>
+    <p>Isso indica que a imagem possui resolução de 640 × 264 pixels, resultando em aproximadamente 0,169 megapixels. Esse tipo de resolução é relativamente baixo quando comparado a imagens produzidas por câmeras modernas, o que sugere que o arquivo pode ter sido redimensionado ou otimizado para distribuição digital.</p>
+    <p>Diferentemente da imagem analisada anteriormente, que continha informações detalhadas sobre o dispositivo utilizado para capturar a fotografia, esta imagem apresenta um conjunto muito mais limitado de metadados. Isso ocorre porque arquivos obtidos a partir da internet frequentemente passam por processos de compressão, redimensionamento ou otimização antes de serem distribuídos.</p>
+    <p>Durante esses processos, muitos dos metadados EXIF originais são removidos. Plataformas de hospedagem de imagens, redes sociais e sistemas de gerenciamento de conteúdo frequentemente eliminam esses dados por motivos de privacidade, redução do tamanho do arquivo ou padronização do formato.</p>
+    <p>Como consequência, imagens baixadas da internet geralmente contêm apenas informações estruturais básicas necessárias para a interpretação do arquivo, como resolução, método de compressão e parâmetros mínimos de codificação.</p>
+    <p>Mesmo com a ausência de metadados detalhados, a análise ainda confirma que o arquivo recuperado possui uma estrutura JPEG íntegra e pode ser interpretado corretamente por softwares de visualização de imagem.</p>
+    <p>Essa diferença entre a imagem capturada diretamente por um dispositivo e a imagem obtida da internet ilustra como o contexto de origem de um arquivo pode influenciar significativamente a quantidade de informações adicionais disponíveis em seus metadados.</p>
+  </div>
+</main>
+</div>
+<script src="../../js/posts-data.js"></script>
+<script src="../../js/post-page.js"></script>
+<script src="../../js/post-toc.js"></script>
+<script src="../../js/code-copy.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Titulo do Post - Guilherme Oliveira</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/common.css">
+<link rel="stylesheet" href="../../css/post.css">
+</head>
+<body>
+<div class="wrapper">
+<header>
+  <div class="logo">
+    <div class="logo-main">Guilherme Oliveira <span class="cursor"></span></div>
+    <div class="logo-sub">Forense Digital • Pentest</div>
+  </div>
+  <nav class="nav-right" aria-label="Navegação principal">
+    <a href="../index.html"><span class="nav-link-icon">⌂</span>home</a>
+    <a href="../whoami.html"><span class="nav-link-icon">i</span>whoami</a>
+  </nav>
+  <div class="sidebar-social">
+    <a href="https://github.com/Jugolino" target="_blank" rel="noopener noreferrer" aria-label="GitHub">GitHub</a>
+    <a href="https://www.linkedin.com/in/guilherme-oliveira-6b6992276" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">LinkedIn</a>
+  </div>
+</header>
+
+<main class="post-content-area">
+  <div class="post-header">
+    <h1 class="post-title">Título do Post</h1>
+    <div class="post-date">Mes Dia, Ano • Categoria</div>
+  </div>
+
+  <!-- Capa automática vinda de posts-data.js (campo cover) -->
+  <div class="post-hero"></div>
+
+  <!-- Menu lateral opcional -->
+  <aside class="post-toc" id="post-toc">
+    <section class="post-side-section">
+      <h3>Contents</h3>
+      <a href="#sec-intro">Introdução</a>
+      <a href="#sec-parte-1">Parte 1</a>
+      <a href="#sec-parte-2">Parte 2</a>
+      <a href="#sec-comandos">Comandos Utilizados</a>
+      <a href="#sec-fdisk">Confirmação Estrutural com fdisk</a>
+    </section>
+  </aside>
+
+  <div class="post-body">
+    <h2 id="sec-intro" class="post-section">Introdução</h2>
+    <p>Seu conteúdo aqui.</p>
+
+    <h2 id="sec-parte-1" class="post-section">Parte 1</h2>
+    <p>Seu conteúdo aqui.</p>
+
+    <h2 id="sec-parte-2" class="post-section">Parte 2</h2>
+    <p>Seu conteúdo aqui.</p>
+
+    <h2 id="sec-comandos" class="post-section">Comandos Utilizados</h2>
+    <p>Substitua o comando abaixo pelo que você quiser mostrar neste post.</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-exemplo">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-exemplo">lsblk</code></pre>
+    </div>
+    <p>A saída obtida foi a seguinte:</p>
+    <figure class="post-image-wrap post-image-plain">
+      <img src="../../img/saida-comando.png" alt="Saída do comando no terminal">
+    </figure>
+
+    <p>Observando a saída, é possível identificar três dispositivos principais:</p>
+    <div class="device-summary">
+      <div class="device-summary-head">
+        <span>Dispositivo</span>
+        <span>Descrição</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>nvme0n1</code></span>
+        <span>disco interno do sistema (476,9 GB)</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>zram0</code></span>
+        <span>área de <span class="cite-word">swap<span class="cite-tip">Swap é uma área usada como extensão da memória RAM, normalmente para aliviar pressão de memória.</span></span> em memória</span>
+      </div>
+      <div class="device-summary-row">
+        <span><code>sda</code></span>
+        <span>dispositivo removível de 14,9 GB</span>
+      </div>
+    </div>
+    <p>O campo RM = 1 indica que <code>sda</code> é um dispositivo removível. Além disso, o tamanho de aproximadamente 14,9 GB confirma tratar-se do pendrive utilizado no teste.</p>
+
+    <h2 id="sec-fdisk" class="post-section">Confirmação Estrutural com fdisk</h2>
+    <p>Para confirmar as informações e obter detalhes estruturais do dispositivo, foi executado:</p>
+    <div class="command-box">
+      <div class="command-box-head">
+        <span class="command-lang">bash</span>
+        <button type="button" class="command-copy-btn" data-copy-target="cmd-fdisk">Copiar</button>
+      </div>
+      <pre class="command-box-code"><code id="cmd-fdisk">sudo fdisk -l</code></pre>
+    </div>
+  </div>
+</main>
+</div>
+<script src="../../js/posts-data.js"></script>
+<script src="../../js/post-page.js"></script>
+<script src="../../js/post-toc.js"></script>
+<script src="../../js/code-copy.js"></script>
+</body>
+</html>
